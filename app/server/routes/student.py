@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, Body, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
-from app.server.crud import (
+from server.crud import (
     add_student,
     delete_student,
     retrieve_one_student,
@@ -10,7 +10,7 @@ from app.server.crud import (
     update_student,
 )
 
-from app.server.schemas import (
+from server.schemas import (
     ErrorResponseModel,
     ResponseModel,
     StudentSchema,
