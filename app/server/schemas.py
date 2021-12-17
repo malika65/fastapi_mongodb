@@ -3,54 +3,60 @@ from typing import Optional, List
 from pydantic import BaseModel, EmailStr, Field
 from bson import ObjectId
 
+class PyObjectId(ObjectId):
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
 
+    @classmethod
+    def validate(cls, v):
+        if not ObjectId.is_valid(v):
+            raise ValueError("Invalid objectid")
+        return ObjectId(v)
 
-class StudentSchema(BaseModel):
-    fullname: str = Field(...)
+    @classmethod
+    def __modify_schema__(cls, field_schema):
+        field_schema.update(type="string")
+    
+
+class StudentModel(BaseModel):
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    name: str = Field(...)
     email: EmailStr = Field(...)
-    course_of_study: str = Field(...)
-    year: int = Field(..., gt=0, lt=18)
+    course: str = Field(...)
     gpa: float = Field(..., le=4.0)
 
     class Config:
+        allow_population_by_field_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
         schema_extra = {
             "example": {
-                "fullname": "John Doe",
-                "email": "jdoe@x.edu.ng",
-                "course_of_study": "Water resources engineering",
-                "year": 16,
+                "name": "Jane Doe",
+                "email": "jdoe@example.com",
+                "course": "Experiments, Science, and Fashion in Nanophotonics",
                 "gpa": "3.0",
             }
         }
 
-
-
-class StudentOutSchema(StudentSchema):
-    id: int 
    
-# class ManyStudentsInResponse(StudentOutSchema):
-#     students: List[StudentOutSchema] = []
-#     students_count: int = Schema(..., alias="studentsCount")
-   
-
-class UpdateStudentSchema(BaseModel):
-    fullname: Optional[str]
+class UpdateStudentModel(BaseModel):
+    name: Optional[str]
     email: Optional[EmailStr]
-    course_of_study: Optional[str]
-    year: Optional[int]
+    course: Optional[str]
     gpa: Optional[float]
 
     class Config:
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
         schema_extra = {
             "example": {
-                "fullname": "John Doe",
-                "email": "jdoe@x.edu.ng",
-                "course_of_study": "Water resources and environmental engineering",
-                "year": 16,
-                "gpa": "4.0",
+                "name": "Jane Doe",
+                "email": "jdoe@example.com",
+                "course": "Experiments, Science, and Fashion in Nanophotonics",
+                "gpa": "3.0",
             }
         }
-
 
 def ResponseModel(data, message):
     return {

@@ -1,75 +1,66 @@
 from typing import List
-from fastapi import APIRouter, Body, status
+from fastapi import APIRouter, Body, status, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
-from app.server.crud import (
+from server.crud import (
     add_student,
-    delete_student,
+    delete_student_by_id,
     retrieve_one_student,
     retrieve_students,
-    update_student,
+    update_student_by_id
 )
 
-from app.server.schemas import (
+from server.schemas import (
     ErrorResponseModel,
     ResponseModel,
-    StudentSchema,
-    UpdateStudentSchema,
-    StudentOutSchema,
-    # ManyStudentsInResponse,
+    StudentModel,
+    UpdateStudentModel,
+    
 )
 
 router = APIRouter()
 
+from server.database import student_collection
 
 
-@router.get("/", response_description="Students retrieved")
-async def get_students():
+@router.get("/", response_description="List all students", response_model=List[StudentModel])
+async def list_students():
     students = await retrieve_students()
-    if students:
-        return ResponseModel(students, "Students data retrieved successfully")
-    return ResponseModel(students, "Empty list returned")
+    return students
 
-
-@router.post("/", response_description="Student data added into the database")
-async def add_student_data(student: StudentSchema = Body(...)):
+@router.post("/", response_description="Add new student", response_model=StudentModel)
+async def create_student(student: StudentModel = Body(...)):
     student = jsonable_encoder(student)
-    new_student = await add_student(student)
-    return ResponseModel(new_student, "Student added successfully.")
+    created_student = await add_student(student)
+    return JSONResponse(status_code=status.HTTP_201_CREATED, content=created_student)
+
+@router.get("/{id}", response_description="Get a single student", response_model=StudentModel)
+async def show_student(id: str):
+
+    if (student := await retrieve_one_student(id) ) is not None:
+        return student
+
+    raise HTTPException(status_code=404, detail=f"Student {id} not found")
+
+@router.put("/{id}", response_description="Update a student", response_model=StudentModel)
+async def update_student(id: str, student: UpdateStudentModel = Body(...)):
+    student = {k: v for k, v in student.dict().items() if v is not None}
+    updated_stud = await update_student_by_id(id, student)
+    if updated_stud:
+        return  updated_stud
+    raise HTTPException(status_code=404, detail=f"Student {id} not found")
 
 
-@router.get("/{id}", response_description="Student data retrieved")
-async def get_student_data(id):
-    student = await retrieve_one_student(id)
-    if student:
-        return ResponseModel(student, "Student data retrieved successfully")
-    return ErrorResponseModel("An error occurred.", 404, "Student doesn't exist.")
 
 
-@router.put("/{id}")
-async def update_student_data(id: str, req: UpdateStudentSchema = Body(...)):
-    req = {k: v for k, v in req.dict().items() if v is not None}
-    updated_student = await update_student(id, req)
-    print(updated_student)
-    if updated_student:
-        return ResponseModel(
-            "Student with ID: {} name update is successful".format(id),
-            "Student name updated successfully",
-        )
-    return ErrorResponseModel(
-        "An error occurred",
-        404,
-        "There was an error updating the student data.",
-    )
+@router.delete("/{id}", response_description="Delete a student")
+async def delete_student(id: str):
 
+    delete_result = await delete_student_by_id(id)
+    if delete_result:
+        return {
+            "msg":"Student with ID: {id} removed. Student deleted successfully",
+            "status": status.HTTP_204_NO_CONTENT
+            }
 
-@router.delete("/{id}", response_description="Student data deleted from the database")
-async def delete_student_data(id: str):
-    deleted_student = await delete_student(id)
-    if deleted_student:
-        return ResponseModel(
-            "Student with ID: {} removed".format(id), "Student deleted successfully"
-        )
-    return ErrorResponseModel(
-        "An error occurred", 404, "Student with id {0} doesn't exist".format(id)
-    )
+    raise HTTPException(status_code=404, detail=f"Student {id} not found")

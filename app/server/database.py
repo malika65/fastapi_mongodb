@@ -8,7 +8,7 @@ client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_DETAILS)
 
 database = client.students
 
-student_collection = database.get_collection("students_collection")
+student_collection = database.get_collection("students_second_collection")
 
 
 
@@ -22,9 +22,8 @@ student_collection = database.get_collection("students_collection")
 def student_helper(student) -> dict:
     return {
         "id": str(student["_id"]),
-        "fullname": student["fullname"],
+        "name": student["name"],
         "email": student["email"],
-        "course_of_study": student["course_of_study"],
-        "year": student["year"],
+        "course": student["course"],
         "GPA": student["gpa"],
     }
